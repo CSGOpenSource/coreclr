@@ -446,7 +446,7 @@ namespace System.Threading
             m_state = state;
             m_dueTime = Timeout.UnsignedInfinite;
             m_period = Timeout.UnsignedInfinite;
-            m_executionContext = ExecutionContext.Capture(); // TODO: flow AsyncLocal?
+            m_executionContext = ExecutionContext.Capture();
             m_associatedTimerQueue = TimerQueue.Instances[RuntimeThread.GetCurrentProcessorId() % TimerQueue.Instances.Length];
 
             //

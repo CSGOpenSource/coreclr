@@ -234,7 +234,7 @@ namespace System.Threading
 
             CancellationTokenSource source = _source;
             return source != null ?
-                source.InternalRegister(callback, state, useSyncContext ? SynchronizationContext.Current : null, useExecutionContext ? ExecutionContext.Capture()?.DeepCloneAsyncLocals() : null) :
+                source.InternalRegister(callback, state, useSyncContext ? SynchronizationContext.Current : null, useExecutionContext ? ExecutionContext.Capture() : null) :
                 default(CancellationTokenRegistration); // Nothing to do for tokens than can never reach the canceled state. Give back a dummy registration.
         }
 

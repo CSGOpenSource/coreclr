@@ -542,7 +542,7 @@ namespace System.Threading.Tasks
             m_action = action;
             if (flowExecutionContext)
             {
-                m_capturedContext = ExecutionContext.Capture()?.DeepCloneAsyncLocals();
+                m_capturedContext = ExecutionContext.Capture();
             }
         }
 

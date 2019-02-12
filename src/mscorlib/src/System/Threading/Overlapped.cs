@@ -169,7 +169,7 @@ namespace System.Threading
 
             if (iocb != null)
             {
-                ExecutionContext ec = ExecutionContext.Capture()?.DeepCloneAsyncLocals();
+                ExecutionContext ec = ExecutionContext.Capture();
                 m_iocbHelper = ec != null ? new _IOCompletionCallback(iocb, ec) : null;
                 m_iocb = iocb;
             }
