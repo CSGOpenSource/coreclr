@@ -75,6 +75,31 @@ namespace System.Threading
             return new ExecutionContext(m_localValues, m_localChangeNotifications, isFlowSuppressed);
         }
 
+        // Called to clone certain AsynLocal values.
+        internal ExecutionContext DeepCloneAsyncLocals()
+        {
+            if (!HasChangeNotifications)
+                return this;
+
+            var localValues = m_localValues;
+
+            // Note that IAsyncLocalValueMap does not provide a way to enumerate all values. To keep the code change
+            // to the minimum, we only clone AsyncLocal values that have registered for change notification.
+            // i.e. "CSG.Framework.Core.PiggybackedLogicalOperationStack" MUST register for change notification.
+            foreach (var key in m_localChangeNotifications)
+            {
+                if (!m_localValues.TryGetValue(key, out var value))
+                    continue;
+
+                if (value is ICloneable cloneable && value.GetType().FullName == "CSG.Framework.Core.PiggybackedLogicalOperationStack")
+                    localValues = localValues.Set(key, cloneable.Clone());
+            }
+
+            return ReferenceEquals(localValues, m_localValues)
+                ? this
+                : new ExecutionContext(localValues, m_localChangeNotifications, m_isFlowSuppressed);
+        }
+
         public static AsyncFlowControl SuppressFlow()
         {
             Thread currentThread = Thread.CurrentThread;
