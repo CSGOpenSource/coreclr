@@ -259,7 +259,7 @@ namespace System.Threading
                 // If we reach here with a null delegate, something is broken. But we'll let the StartInternal method take care of
                 // reporting an error. Just make sure we don't try to dereference a null delegate.
                 ThreadHelper t = (ThreadHelper)(m_Delegate.Target);
-                ExecutionContext ec = ExecutionContext.Capture();
+                ExecutionContext ec = ExecutionContext.Capture()?.TryCloneAsyncLocals();
                 t.SetExecutionContextHelper(ec);
             }
 
