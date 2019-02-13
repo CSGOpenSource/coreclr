@@ -2,8 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 
 namespace System.Threading
 {
@@ -115,6 +117,7 @@ namespace System.Threading
     {
         bool TryGetValue(IAsyncLocal key, out object value);
         IAsyncLocalValueMap Set(IAsyncLocal key, object value);
+        IAsyncLocalValueMap TryClone();
     }
 
     //
@@ -122,6 +125,25 @@ namespace System.Threading
     //
     internal static class AsyncLocalValueMap
     {
+        private const string AsyncLocalCloneMethodName = "_AsyncLocalClone_";
+        private static readonly ConcurrentDictionary<Type, Func<object, object>> AsyncLocalCloneMethodCache = new ConcurrentDictionary<Type, Func<object, object>>();
+
+        private static object TryClone(this object value)
+        {
+            if (value == null)
+                return null;
+
+            var type = value.GetType();
+            if (!AsyncLocalCloneMethodCache.TryGetValue(type, out var cloneDelegate))
+            {
+                var methodInfo = type.GetMethod(AsyncLocalCloneMethodName, BindingFlags.Static | BindingFlags.Public, null, new Type[] {typeof(object)}, null);
+                cloneDelegate = (Func<object, object>)methodInfo?.CreateDelegate(typeof(Func<object, object>));
+                AsyncLocalCloneMethodCache.TryAdd(type, cloneDelegate);
+            }
+
+            return cloneDelegate == null ? value : cloneDelegate(value);
+        }
+
         public static IAsyncLocalValueMap Empty { get; } = new EmptyAsyncLocalValueMap();
 
         // Instance without any key/value pairs.  Used as a singleton/
@@ -140,6 +162,11 @@ namespace System.Threading
             {
                 value = null;
                 return false;
+            }
+
+            public IAsyncLocalValueMap TryClone()
+            {
+                return this;
             }
         }
 
@@ -187,6 +214,12 @@ namespace System.Threading
                     value = null;
                     return false;
                 }
+            }
+
+            public IAsyncLocalValueMap TryClone()
+            {
+                var value1Clone = _value1.TryClone();
+                return ReferenceEquals(value1Clone, _value1) ? this : new OneElementAsyncLocalValueMap(_key1, value1Clone);
             }
         }
 
@@ -242,6 +275,16 @@ namespace System.Threading
                     value = null;
                     return false;
                 }
+            }
+
+            public IAsyncLocalValueMap TryClone()
+            {
+                var value1Clone = _value1.TryClone();
+                var value2Clone = _value2.TryClone();
+
+                return ReferenceEquals(value1Clone, _value1) && ReferenceEquals(value2Clone, _value2)
+                    ? this
+                    : new TwoElementAsyncLocalValueMap(_key1, value1Clone, _key2, value2Clone);
             }
         }
 
@@ -311,6 +354,17 @@ namespace System.Threading
                     value = null;
                     return false;
                 }
+            }
+
+            public IAsyncLocalValueMap TryClone()
+            {
+                var value1Clone = _value1.TryClone();
+                var value2Clone = _value2.TryClone();
+                var value3Clone = _value3.TryClone();
+
+                return ReferenceEquals(value1Clone, _value1) && ReferenceEquals(value2Clone, _value2) && ReferenceEquals(value3Clone, _value3)
+                    ? this
+                    : new ThreeElementAsyncLocalValueMap(_key1, value1Clone, _key2, value2Clone, _key3, value3Clone);
             }
         }
 
@@ -411,6 +465,25 @@ namespace System.Threading
                 value = null;
                 return false;
             }
+
+            public IAsyncLocalValueMap TryClone()
+            {
+                var cloneHappened = false;
+                var clone = new MultiElementAsyncLocalValueMap(_keyValues.Length);
+
+                for (var i=0; i< _keyValues.Length; i++)
+                {
+                    var kvp = _keyValues[i];
+                    var valueClone = kvp.Value.TryClone();
+
+                    if (!ReferenceEquals(valueClone, kvp.Value))
+                        cloneHappened = true;
+
+                    clone._keyValues[i] = new KeyValuePair<IAsyncLocal, object>(kvp.Key, valueClone);
+                }
+
+                return cloneHappened ? clone : this;
+            }
         }
 
         // Instance with any number of key/value pairs.
@@ -478,6 +551,24 @@ namespace System.Threading
                 // We were storing null, but the key wasn't in the map, so there's nothing to change.
                 // Just return this instance.
                 return this;
+            }
+
+            public IAsyncLocalValueMap TryClone()
+            {
+                var cloneHappened = false;
+                var clone = new ManyElementAsyncLocalValueMap(Count);
+
+                foreach (var kvp in this)
+                {
+                    var valueClone = kvp.Value.TryClone();
+
+                    if (!ReferenceEquals(valueClone, kvp.Value))
+                        cloneHappened = true;
+
+                    clone[kvp.Key] = valueClone;
+                }
+
+                return cloneHappened ? clone : this;
             }
         }
     }
