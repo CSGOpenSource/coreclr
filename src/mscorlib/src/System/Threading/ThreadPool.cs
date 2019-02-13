@@ -1080,7 +1080,7 @@ namespace System.Threading
             if (compressStack)
             {
                 // capture the exection context
-                _executionContext = ExecutionContext.Capture();
+                _executionContext = ExecutionContext.Capture()?.TryCloneAsyncLocals();
             }
         }
 
@@ -1302,7 +1302,7 @@ namespace System.Threading
 
             EnsureVMInitialized();
 
-            ExecutionContext context = ExecutionContext.Capture();
+            ExecutionContext context = ExecutionContext.Capture()?.TryCloneAsyncLocals();
 
             IThreadPoolWorkItem tpcallBack = (context != null && context.IsDefault) ?
                 new QueueUserWorkItemCallbackDefaultContext(callBack, state) :
@@ -1322,7 +1322,7 @@ namespace System.Threading
 
             EnsureVMInitialized();
 
-            ExecutionContext context = ExecutionContext.Capture();
+            ExecutionContext context = ExecutionContext.Capture()?.TryCloneAsyncLocals();
 
             IThreadPoolWorkItem tpcallBack = (context != null && context.IsDefault) ?
                 new QueueUserWorkItemCallbackDefaultContext<TState>(callBack, state) :

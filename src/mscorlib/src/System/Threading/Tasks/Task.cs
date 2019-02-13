@@ -599,7 +599,7 @@ namespace System.Threading.Tasks
 
             Debug.Assert(m_contingentProperties == null || m_contingentProperties.m_capturedContext == null,
                 "Captured an ExecutionContext when one was already captured.");
-            CapturedContext = ExecutionContext.Capture();
+            CapturedContext = ExecutionContext.Capture()?.TryCloneAsyncLocals();
         }
 
         /// <summary>
